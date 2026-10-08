@@ -1,4 +1,4 @@
-const CACHE = 'minha-viagem-2026-v1';
+const CACHE = 'minha-viagem-2026-v3';
 const APP_SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
@@ -15,13 +15,20 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
+  // Sempre tenta a versão online do HTML primeiro para receber atualizações do GitHub Pages.
+  // Se estiver sem internet, cai para a cópia salva.
+  if (url.pathname.endsWith('/') || url.pathname.endsWith('/index.html')) {
+    event.respondWith(fetch(req).then(response => {
+      if (response.ok) caches.open(CACHE).then(cache => cache.put(req, response.clone()));
+      return response;
+    }).catch(() => caches.match(req).then(cached => cached || caches.match('./index.html'))));
+    return;
+  }
+
   event.respondWith(
     caches.match(req).then(cached => cached || fetch(req).then(response => {
-      if (response.ok) {
-        const copy = response.clone();
-        caches.open(CACHE).then(cache => cache.put(req, copy));
-      }
+      if (response.ok) caches.open(CACHE).then(cache => cache.put(req, response.clone()));
       return response;
-    }).catch(() => caches.match('./index.html')))
+    }))
   );
 });
