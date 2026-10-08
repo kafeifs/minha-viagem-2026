@@ -4,7 +4,7 @@ const PARKS_SHEET = 'Cronograma Parques';
 
 function getCellComments_() {
   const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(SPREADSHEET_ID)
-    + '?commentsViewMode=COMMENTS_VIEW_MODE_INCLUDED'
+    + '?commentsViewMode=COMMENTS_VIEW_MODE_DEFAULT_FOR_CURRENT_ACCESS'
     + '&fields=comments(commentId,anchorId,headPost(content),replies(content),status),sheets(properties(sheetId,title),commentAnchors(anchorId,range))';
   const response = UrlFetchApp.fetch(url, {
     method: 'get',
@@ -13,7 +13,8 @@ function getCellComments_() {
   });
   const status = response.getResponseCode();
   if (status < 200 || status >= 300) {
-    throw new Error('Não foi possível ler os comentários do Google Sheets (' + status + ').');
+    const detail = response.getContentText();
+    throw new Error('Não foi possível ler os comentários do Google Sheets (' + status + '). ' + detail.slice(0, 500));
   }
   const data = JSON.parse(response.getContentText());
   const sheetNames = {};
@@ -52,6 +53,14 @@ function getCellComments_() {
   return comments;
 }
 
+function getCommentsSafe_() {
+  try {
+    return {comments: getCellComments_(), warning: null};
+  } catch (err) {
+    return {comments: [], warning: String(err && err.message ? err.message : err)};
+  }
+}
+
 function doGet(e) {
   const callback = (e && e.parameter && e.parameter.callback) || '';
   try {
@@ -60,12 +69,14 @@ function doGet(e) {
     const parkSheet = ss.getSheetByName(PARKS_SHEET);
     if (!daySheet || !parkSheet) throw new Error('Uma das abas configuradas não foi encontrada.');
 
+    const commentResult = getCommentsSafe_();
     const payload = {
       ok: true,
       updatedAt: new Date().toISOString(),
       dayRows: daySheet.getDataRange().getDisplayValues(),
       parkRows: parkSheet.getDataRange().getDisplayValues(),
-      comments: getCellComments_()
+      comments: commentResult.comments,
+      commentsWarning: commentResult.warning
     };
 
     const body = callback

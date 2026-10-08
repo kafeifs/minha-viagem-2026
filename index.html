@@ -88,7 +88,7 @@ function fetchSheetsJsonp(){
     let done=false;
     const timer=setTimeout(()=>finish(new Error('Tempo esgotado ao consultar o Google Sheets.')),15000);
     function finish(err,data){if(done)return;done=true;clearTimeout(timer);delete window[cb];script.remove();err?reject(err):resolve(data)}
-    window[cb]=(payload)=>{try{if(!payload||payload.ok!==true)throw new Error(payload?.error||'O Apps Script retornou um erro.');if(!Array.isArray(payload.dayRows)||!Array.isArray(payload.parkRows)||!Array.isArray(payload.comments))throw new Error('Resposta do Google Sheets incompleta.');finish(null,payload)}catch(e){finish(e)}};
+    window[cb]=(payload)=>{try{if(!payload||payload.ok!==true)throw new Error(payload?.error||'O Apps Script retornou um erro.');if(!Array.isArray(payload.dayRows)||!Array.isArray(payload.parkRows))throw new Error('Resposta do Google Sheets incompleta.');if(!Array.isArray(payload.comments))payload.comments=[];finish(null,payload)}catch(e){finish(e)}};
     script.onerror=()=>finish(new Error('Não foi possível carregar o Apps Script.'));
     const sep=APPS_SCRIPT_URL.includes('?')?'&':'?';
     script.src=APPS_SCRIPT_URL+sep+'callback='+encodeURIComponent(cb)+'&_='+Date.now();
@@ -111,7 +111,7 @@ async function syncSheets(silent=false){
     localStorage.setItem('tripSheetsLastSync',now);
     state.sync={status:'online',label:`Atualizado ${now}`,last:now};
     render();
-    if(!silent)toast('Roteiro atualizado pelo Google Sheets');
+    if(!silent)toast(payload.commentsWarning ? 'Roteiro atualizado; comentários não foram importados' : 'Roteiro atualizado pelo Google Sheets');
     return true;
   }catch(e){
     state.sync.status='offline';
