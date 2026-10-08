@@ -1,4 +1,4 @@
-const CACHE = 'minha-viagem-2026-v4';
+const CACHE = 'minha-viagem-2026-v6';
 const APP_SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
