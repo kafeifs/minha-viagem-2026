@@ -3,7 +3,8 @@ const DAYOFF_SHEET = 'Cronograma Day-off';
 const PARKS_SHEET = 'Cronograma Parques';
 
 function doGet(e) {
-  const callback = (e && e.parameter && e.parameter.callback) || '';
+  const rawCallback = (e && e.parameter && e.parameter.callback) || '';
+  const callback = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(rawCallback) ? rawCallback : '';
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const daySheet = ss.getSheetByName(DAYOFF_SHEET);
@@ -14,21 +15,19 @@ function doGet(e) {
       ok: true,
       updatedAt: new Date().toISOString(),
       dayRows: daySheet.getDataRange().getDisplayValues(),
-      parkRows: parkSheet.getDataRange().getDisplayValues(),
-      comments: [],
-      commentsWarning: null
+      parkRows: parkSheet.getDataRange().getDisplayValues()
     };
 
-    const body = callback
-      ? callback + '(' + JSON.stringify(payload).replace(/</g, '\u003c') + ')'
-      : JSON.stringify(payload);
+    const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+    const body = callback ? callback + '(' + json + ')' : json;
 
     return ContentService
       .createTextOutput(body)
       .setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
   } catch (err) {
-    const payload = { ok:false, error:String(err && err.message ? err.message : err) };
-    const body = callback ? callback + '(' + JSON.stringify(payload) + ')' : JSON.stringify(payload);
+    const payload = { ok: false, error: String(err && err.message ? err.message : err) };
+    const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+    const body = callback ? callback + '(' + json + ')' : json;
     return ContentService
       .createTextOutput(body)
       .setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
